@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="d-flex align-items-center gap-4 mb-5">
+        <h2 class="mb-0">💰 Cuenta Corriente</h2>
+
+        <a href="{% url 'nueva_cuenta_corriente' %}" class="btn btn-success btn-lg">
+            + Nuevo Movimiento
+        </a>
+
+        <a href="{% url 'informe_cuenta_corriente' %}" class="btn btn-primary btn-lg">
+            📊 Ver Informe
+        </a>
+    </div>
+
+    <div class="card shadow-sm mt-5">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle w-100">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Descripción</th>
+                            <th>Venta</th>
+                            <th>Cobro</th>
+                            <th>Saldo</th>
+                            <th style="width: 150px;">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for mov in movimientos %}
+                        <tr>
+                            <td>{{ mov.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ mov.cliente.nombre }}</td>
+                            <td>{{ mov.descripcion }}</td>
+                            <td>${{ mov.total }}</td>
+                            <td>${{ mov.pago }}</td>
+                            <td>${{ mov.saldo }}</td>
+                            <td>
+                                <a href="{% url 'editar_cuenta_corriente' mov.id %}"
+                                   class="btn btn-warning btn-sm w-100">
+                                   ✏️ Editar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                No hay movimientos
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

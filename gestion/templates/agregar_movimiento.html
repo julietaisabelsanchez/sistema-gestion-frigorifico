@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>➕ Nuevo Movimiento Cuenta Corriente</h2>
+
+    <div class="card p-4 shadow">
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+
+            <button type="submit" class="btn btn-success">
+                Guardar Movimiento
+            </button>
+
+            <a href="{% url 'cuenta_corriente' %}" class="btn btn-secondary">
+                Volver
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

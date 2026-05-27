@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2>✏️ Editar Empleado</h2>
+
+    <div class="card shadow-sm p-4">
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <label>Nombre</label>
+                    <input type="text" name="nombre" class="form-control" value="{{ empleado.nombre }}" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label>Teléfono</label>
+                    <input type="text" name="telefono" class="form-control" value="{{ empleado.telefono }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label>Puesto</label>
+                    <input type="text" name="puesto" class="form-control" value="{{ empleado.puesto }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label>Salario</label>
+                    <input type="number" name="salario" class="form-control" value="{{ empleado.salario }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label>Días de trabajo</label>
+                    <input type="text" name="dias_trabajo" class="form-control" value="{{ empleado.dias_trabajo }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label>Horario</label>
+                    <input type="text" name="horario" class="form-control" value="{{ empleado.horario }}">
+                </div>
+
+            </div>
+
+            <button class="btn btn-success mt-3">💾 Guardar cambios</button>
+
+            <a href="{% url 'empleados' %}" class="btn btn-secondary mt-3">
+                ⬅ Volver
+            </a>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">📊 Panel de Control</h2>
+
+<div class="row g-4">
+
+    <div class="col-md-2">
+        <div class="card p-3 shadow-sm">
+            <h6>💰 Ventas</h6>
+            <h3 id="ventas" class="text-success">$0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 shadow-sm">
+            <h6>📦 Productos</h6>
+            <h3 id="productos">0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 shadow-sm">
+            <h6>👥 Clientes</h6>
+            <h3 id="clientes">0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 shadow-sm">
+            <h6>📉 Deudas</h6>
+            <h3 id="deudas" class="text-danger">$0</h3>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card p-3 shadow-sm">
+            <h6>⚠️ Stock bajo</h6>
+            <h4 id="stock" class="text-success">0</h4>
+            <small id="detalle-stock">Todo en orden ✔</small>
+        </div>
+    </div>
+
+</div>
+
+<hr>
+
+<h4>📊 Ventas recientes</h4>
+
+<div style="max-width:400px; margin:auto;" class="card p-3 shadow-sm">
+    <canvas id="grafico"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    const ctx = document.getElementById('grafico');
+
+    let grafico = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    '#4CAF50',
+                    '#2196F3',
+                    '#FFC107',
+                    '#FF5722',
+                    '#9C27B0'
+                ]
+            }]
+        }
+    });
+
+    function actualizarDashboard() {
+        fetch('/dashboard/datos/')
+            .then(response => response.json())
+            .then(data => {
+
+                document.getElementById('ventas').innerText ='$' + Number(data.ventas).toLocaleString('es-AR');
+                document.getElementById('productos').innerText = data.productos;
+                document.getElementById('clientes').innerText = data.clientes;
+                document.getElementById('deudas').innerText = '$' + Number(data.deudas).toLocaleString('es-AR');
+                document.getElementById('stock').innerText = data.stock_bajo;
+
+                if (data.stock_nombres.length > 0) {
+                    document.getElementById('detalle-stock').innerText = data.stock_nombres.join(', ');
+                    document.getElementById('stock').className = 'text-danger';
+                } else {
+                    document.getElementById('detalle-stock').innerText = 'Todo en orden ✔';
+                    document.getElementById('stock').className = 'text-success';
+                }
+
+                grafico.data.labels = data.fechas;
+                grafico.data.datasets[0].data = data.totales;
+                grafico.update();
+            })
+            .catch(error => console.error(error));
+    }
+
+    actualizarDashboard();
+    setInterval(actualizarDashboard, 1000);
+
+});
+</script>
+
+{% endblock %}

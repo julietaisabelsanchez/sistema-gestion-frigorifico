@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">💰 Ventas</h2>
+
+    <div class="mb-4">
+        <a href="{% url 'informe_ventas' %}" class="btn btn-info">
+            📊 Informe de Ventas
+        </a>
+    </div>
+
+    <div class="card p-4 shadow-sm mb-4">
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label>Cliente</label>
+                <select name="cliente" class="form-control" required>
+                    <option value="">Seleccionar cliente</option>
+                    {% for c in clientes %}
+                        <option value="{{ c.id }}">{{ c.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Producto</label>
+                <select name="producto" class="form-control" required>
+                    <option value="">Seleccionar producto</option>
+                    {% for p in productos %}
+                        <option value="{{ p.id }}">
+                            {{ p.nombre }} (Stock: {{ p.stock }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Cantidad</label>
+                <input type="number" name="cantidad" class="form-control" required min="1">
+            </div>
+
+            <div class="mb-3">
+                <label>Fecha</label>
+                <input type="date" name="fecha" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Número de comprobante</label>
+                <input type="text"
+                       name="numero_comprobante"
+                       class="form-control"
+                       value="0001-{{ ventas.count|add:1 }}"
+                       required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                Vender
+            </button>
+        </form>
+    </div>
+
+    <div class="card p-3 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Total</th>
+                        <th>Fecha</th>
+                        <th>Comprobante</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for venta in ventas %}
+                    <tr>
+                        <td>{{ venta.id }}</td>
+
+                        <td>{{ venta.cliente.nombre }}</td>
+
+                        <td>
+                            {% for d in venta.detalleventa_set.all %}
+                                {{ d.producto.nombre }}<br>
+                            {% empty %}
+                                Sin producto
+                            {% endfor %}
+                        </td>
+
+                        <td>
+                            {% for d in venta.detalleventa_set.all %}
+                                {{ d.cantidad }}<br>
+                            {% empty %}
+                                0
+                            {% endfor %}
+                        </td>
+
+                        <td>
+                            {% for d in venta.detalleventa_set.all %}
+                                ${{ d.subtotal|floatformat:0|intcomma }}
+                            {% empty %}
+                                $0
+                            {% endfor %}
+                        </td>
+
+                        <td>{{ venta.fecha|date:"d/m/Y" }}</td>
+
+                        <td>{{ venta.numero_comprobante }}</td>
+
+                        <td>
+                            <a href="{% url 'editar_venta' venta.id %}" class="btn btn-warning btn-sm">
+                                ✏️
+                            </a>
+
+                            <a href="{% url 'factura_pdf' venta.id %}" class="btn btn-danger btn-sm">
+                                PDF
+                            </a>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            No hay ventas registradas
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

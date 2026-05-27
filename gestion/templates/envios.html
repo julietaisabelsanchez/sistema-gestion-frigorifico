@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">🚚 Envíos</h2>
+
+<div class="card shadow-sm p-4 mb-4">
+    <h5>➕ Nuevo Envío</h5>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="row g-3">
+
+            <div class="col-md-4">
+                <select name="cliente" class="form-control" required>
+                    <option value="">Seleccionar Cliente</option>
+                    {% for c in clientes %}
+                        <option value="{{ c.id }}">{{ c.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input type="text"
+                       name="direccion"
+                       class="form-control"
+                       placeholder="Dirección"
+                       required>
+            </div>
+
+            <div class="col-md-4">
+                <input type="text"
+                       name="ciudad"
+                       class="form-control"
+                       placeholder="Ciudad"
+                       required>
+            </div>
+
+        </div>
+
+        <button type="submit" class="btn btn-success mt-3">
+            Guardar
+        </button>
+
+    </form>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+    <h5>🗺️ Mapa del envío seleccionado</h5>
+
+    {% if envios %}
+        <iframe
+            width="100%"
+            height="400"
+            style="border:0; border-radius:10px;"
+            loading="lazy"
+            allowfullscreen
+            src="https://www.google.com/maps?q={{ envios.0.direccion }}, {{ envios.0.ciudad }}, Salta, Argentina&output=embed">
+        </iframe>
+
+        <p class="mt-2 text-muted">
+            Mostrando: {{ envios.0.direccion }}, {{ envios.0.ciudad }}
+        </p>
+
+    {% else %}
+        <p class="text-muted">Primero cargá un envío para ver el mapa</p>
+    {% endif %}
+</div>
+
+<div class="row">
+
+    {% for e in envios %}
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm p-3 h-100">
+
+            <h5>{{ e.cliente.nombre }}</h5>
+
+            <p><strong>📍</strong> {{ e.direccion }}</p>
+            <p><strong>🏙️</strong> {{ e.ciudad }}</p>
+
+            <p>
+                {% if e.estado == "Pendiente" %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                {% elif e.estado == "En camino" %}
+                    <span class="badge bg-primary">En camino</span>
+                {% else %}
+                    <span class="badge bg-success">Entregado</span>
+                {% endif %}
+            </p>
+
+            <small class="text-muted">{{ e.fecha }}</small>
+
+            <div class="mt-3 d-flex justify-content-between">
+
+                <a href="https://www.google.com/maps?q={{ e.direccion }} {{ e.ciudad }}"
+                   target="_blank"
+                   class="btn btn-sm btn-outline-primary">
+                    🗺️ Ver
+                </a>
+
+                <a href="{% url 'cambiar_estado_envio' e.id %}"
+                   class="btn btn-sm btn-warning">
+                    🔄 Estado
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+
+    {% empty %}
+        <p class="text-muted">No hay envíos cargados</p>
+    {% endfor %}
+
+</div>
+
+{% endblock %}

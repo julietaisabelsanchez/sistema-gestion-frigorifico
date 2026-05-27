@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">📉 Gestión de Deudas</h2>
+
+    <div class="card shadow-sm p-4 mt-5">
+        <input type="text" id="buscador" class="form-control mb-4" placeholder="🔍 Buscar cliente...">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Total Comprado</th>
+                        <th>Total Pagado</th>
+                        <th>Deuda</th>
+                        <th>Fecha</th>
+                        <th>Monto</th>
+                        <th>Cobrar</th>
+                        <th>PDF</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for d in datos %}
+                    <tr>
+                        <form method="POST" action="{% url 'registrar_pago' d.cliente.id %}">
+                            {% csrf_token %}
+
+                            <td>{{ d.cliente.nombre }}</td>
+                            <td>${{ d.ventas|floatformat:0|intcomma }}</td>
+                            <td class="text-success">${{ d.pagos|floatformat:0|intcomma }}</td>
+                            <td class="text-danger fw-bold">${{ d.deuda|floatformat:0|intcomma }}</td>
+
+                            <td>
+                                <input
+                                    type="date"
+                                    name="fecha"
+                                    class="form-control"
+                                    value="{% now 'Y-m-d' %}"
+                                    required
+                                >
+                            </td>
+
+                            <td>
+                                <input
+                                    type="number"
+                                    name="monto"
+                                    class="form-control"
+                                    placeholder="Ingrese monto"
+                                    min="1"
+                                    step="0.01"
+                                    required
+                                >
+                            </td>
+
+                            <td>
+                                <button type="submit" class="btn btn-success">
+                                    💵 Cobrar
+                                </button>
+                            </td>
+
+                            <td>
+                                <a href="{% url 'recibo_pago_pdf' d.cliente.id %}?monto={{ d.deuda }}&fecha={% now 'Y-m-d' %}"
+                                   class="btn btn-primary">
+                                    📄 PDF
+                                </a>
+                            </td>
+
+                        </form>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            No hay deudas registradas
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById("buscador").addEventListener("keyup", function() {
+    let filtro = this.value.toLowerCase();
+    let filas = document.querySelectorAll("tbody tr");
+
+    filas.forEach(fila => {
+        let cliente = fila.cells[0].textContent.toLowerCase();
+        fila.style.display = cliente.includes(filtro) ? "" : "none";
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4 px-4">
+
+    <h2 class="mb-4">📊 Informe Cuenta Corriente</h2>
+
+    <!-- FILTROS -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET">
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Cliente</label>
+                        <select name="cliente" class="form-select">
+                            <option value="">Todos</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.id }}" {% if cliente_id == c.id|stringformat:"s" %}selected{% endif %}>
+                                {{ c.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Desde</label>
+                        <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success w-100">
+                            Generar Informe
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- INFORME IA -->
+    <div class="card shadow-sm mb-4 border-primary">
+        <div class="card-body">
+            <h4 class="text-primary">🤖 Informe Inteligente Automático</h4>
+            <p style="white-space: pre-line; font-size: 16px;">
+                {{ informe_ia }}
+            </p>
+        </div>
+    </div>
+
+    <!-- TARJETAS -->
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <h5>Total Ventas</h5>
+                    <h2 class="text-primary">${{ total_ventas }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <h5>Total Cobros</h5>
+                    <h2 class="text-success">${{ total_cobros }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-body">
+                    <h5>Saldo Pendiente</h5>
+                    <h2 class="text-danger">${{ saldo_final }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TABLA -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Descripción</th>
+                            <th>Venta</th>
+                            <th>Cobro</th>
+                            <th>Saldo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for mov in movimientos %}
+                        <tr>
+                            <td>{{ mov.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ mov.cliente.nombre }}</td>
+                            <td>{{ mov.descripcion }}</td>
+                            <td>${{ mov.total }}</td>
+                            <td>${{ mov.pago }}</td>
+                            <td>${{ mov.saldo }}</td>
+                            <td>
+                                <a href="{% url 'editar_cuenta_corriente' mov.id %}"
+                                   class="btn btn-warning btn-sm">
+                                    ✏️ Editar
+                                </a>
+                            </td>
+                        </tr>
+
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">
+                                No hay movimientos
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTONES -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+          <a href="{% url 'informe_cuenta_corriente_pdf' %}?cliente={{ cliente_seleccionado|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}"
+   class="btn btn-danger">
+    Descargar PDF
+</a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

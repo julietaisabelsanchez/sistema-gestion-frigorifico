@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+    .form-container{
+        max-width: 500px;
+        margin: auto;
+    }
+</style>
+
+<div class="container mt-5">
+
+    <div class="form-container">
+
+        <div class="card shadow border-0 rounded-3">
+
+            <div class="card-body p-4">
+
+                <h3 class="text-center mb-4">
+                    Registrar Empleado
+                </h3>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Nombre Completo
+                        </label>
+                        <input type="text" name="nombre" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            DNI
+                        </label>
+                        <input type="text" name="dni" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Teléfono
+                        </label>
+                        <input type="text" name="telefono" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Cargo
+                        </label>
+                        <input type="text" name="cargo" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Salario
+                        </label>
+                        <input type="number" name="salario" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Fecha
+                        </label>
+                        <input type="date" name="fecha" class="form-control">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">
+                            Hora
+                        </label>
+                        <input type="time" name="hora" class="form-control">
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            Guardar Empleado
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

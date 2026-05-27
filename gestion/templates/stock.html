@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">📦 Agregar Producto</h2>
+
+<div class="card p-4 shadow-sm" style="max-width:600px;">
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label>Nombre</label>
+            <input type="text"
+                   name="nombre"
+                   class="form-control"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label>Precio</label>
+            <input type="number"
+                   name="precio"
+                   class="form-control"
+                   min="1"
+                   step="1"
+                   placeholder="Ej: 50000"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label>Stock</label>
+            <input type="number"
+                    name="stock"
+                    class="form-control"
+                    min="0"
+                    step="1"
+                    placeholder="Ej: 100"
+                    required>
+        </div>
+
+        <button class="btn btn-success w-100">
+            Guardar
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Clientes</h2>
+
+<a href="{% url 'agregar_cliente' %}" class="btn btn-primary mb-3">
+    ➕ Agregar Cliente
+</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in clientes %}
+        <tr>
+            <td>{{ c.nombre }}</td>
+            <td>{{ c.telefono|default:"-" }}</td>
+            <td>{{ c.direccion|default:"-" }}</td>
+            <td>
+                <a href="{% url 'editar_cliente' c.id %}" class="btn btn-warning btn-sm">✏️</a>
+                <a href="{% url 'eliminar_cliente' c.id %}" class="btn btn-danger btn-sm">🗑️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}}

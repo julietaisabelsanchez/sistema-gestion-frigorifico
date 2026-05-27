@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card p-4">
+    <h3>Agregar Cliente</h3>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <input type="text" name="nombre" placeholder="Nombre" class="form-control mb-2" required>
+        <input type="text" name="telefono" placeholder="Teléfono" class="form-control mb-2">
+        <input type="text" name="dni" placeholder="DNI" class="form-control mb-2" required>
+        <input type="text" name="direccion" placeholder="Dirección" class="form-control mb-3">
+
+        <button class="btn btn-success w-100">Guardar</button>
+    </form>
+</div>
+{% endblock %}

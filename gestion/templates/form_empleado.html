@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card shadow p-4" style="max-width:600px;">
+    <h3 class="mb-3">👨‍💼 Cargar Empleado</h3>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button class="btn btn-success w-100">Guardar</button>
+        <a href="{% url 'empleados' %}" class="btn btn-secondary mt-2 w-100">Volver</a>
+    </form>
+
+</div>
+
+{% endblock %}

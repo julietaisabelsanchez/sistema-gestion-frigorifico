@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Cambiar Stock</h2>
+
+<div class="card p-4">
+    <form method="POST">
+        {% csrf_token %}
+
+        <label>Producto</label>
+        <input type="text" class="form-control mb-2" value="{{ producto.nombre }}" disabled>
+
+        <label>Stock</label>
+        <input type="number" name="stock" class="form-control mb-3" value="{{ producto.stock }}">
+
+        <button type="submit" class="btn btn-success w-100">Guardar</button>
+        <a href="{% url 'productos' %}" class="btn btn-secondary w-100 mt-2">Volver</a>
+    </form>
+</div>
+
+{% endblock %}

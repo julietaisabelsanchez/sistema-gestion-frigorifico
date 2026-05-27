@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Editar Producto</h2>
+
+<div class="card p-4">
+    <form method="POST">
+        {% csrf_token %}
+
+        <label>Nombre</label>
+        <input type="text" name="nombre" value="{{ producto.nombre }}" class="form-control mb-2">
+
+        <label>Precio</label>
+        <input type="number" name="precio" value="{{ producto.precio }}" class="form-control mb-2">
+
+        <label>Stock</label>
+        <input type="number" name="stock" value="{{ producto.stock }}" class="form-control mb-3">
+
+        <button type="submit" class="btn btn-success w-100">Guardar</button>
+        <a href="{% url 'productos' %}" class="btn btn-secondary w-100 mt-2">Volver</a>
+    </form>
+</div>
+
+{% endblock %}

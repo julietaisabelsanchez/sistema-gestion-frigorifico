@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #1f2937;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 300px;
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1976D2;
+    }
+
+    #mensaje {
+      margin-top: 10px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>Registro</h2>
+
+  <input type="email" id="email" placeholder="Correo">
+  <input type="password" id="password" placeholder="Contraseña">
+
+  <button onclick="register()">Crear cuenta</button>
+
+  <p id="mensaje"></p>
+
+  <p><a href="/login/">Ir al login</a></p>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBQrgT9yh_pWf1BA8ZucQkEuXSTu3mI2W0",
+    authDomain: "frigorifico-221ba.firebaseapp.com",
+    projectId: "frigorifico-221ba",
+    appId: "1:88394470433:web:c821d159f50a246f187f60"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  function register() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(() => {
+        document.getElementById("mensaje").innerText = "Usuario creado ✔";
+        setTimeout(() => {
+          window.location.href = "/login/";
+        }, 1500);
+      })
+      .catch(error => {
+        document.getElementById("mensaje").innerText = error.message;
+      });
+  }
+</script>
+
+</body>
+</html>
