@@ -52,9 +52,13 @@ from .forms import (
 
 # 🔥 FIREBASE
 if not firebase_admin._apps:
-    cred = credentials.Certificate(
-        r"C:\Fabrica de grasa\frigorifico\frigorifico\firebase.json"
+    firebase_path = os.path.join(
+        os.path.dirname(__file__),
+        '..',
+        'firebase.json'
     )
+
+    cred = credentials.Certificate(firebase_path)
     firebase_admin.initialize_app(cred)
 
 
