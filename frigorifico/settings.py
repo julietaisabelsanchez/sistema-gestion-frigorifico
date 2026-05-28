@@ -14,7 +14,8 @@ DEBUG = False
 ALLOWED_HOSTS = [
     'sistema-gestion-frigorifico.onrender.com',
     'localhost',
-    '127.0.0.1'
+    '127.0.0.1',
+    'sistema.my'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
