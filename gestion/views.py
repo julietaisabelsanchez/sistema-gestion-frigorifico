@@ -30,6 +30,10 @@ from django.shortcuts import render
 from .models import Venta, Cliente
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
+import os
+import json
+import firebase_admin
+from firebase_admin import credentials
 
 from .models import (
     Cliente,
@@ -52,15 +56,12 @@ from .forms import (
 
 # 🔥 FIREBASE
 if not firebase_admin._apps:
-    firebase_path = os.path.join(
-        os.path.dirname(__file__),
-        '..',
-        'firebase.json'
+    firebase_credentials = json.loads(
+        os.environ.get("FIREBASE_CREDENTIALS")
     )
 
-    cred = credentials.Certificate(firebase_path)
+    cred = credentials.Certificate(firebase_credentials)
     firebase_admin.initialize_app(cred)
-
 
 # =========================
 # 🔐 LOGIN
