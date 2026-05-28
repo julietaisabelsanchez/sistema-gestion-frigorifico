@@ -71,7 +71,7 @@ def requiere_login(request):
 
 
 def login_view(request):
-    return render(request, "login.html")
+    return HttpResponse("LOGIN OK")
 
 
 def registro_view(request):
