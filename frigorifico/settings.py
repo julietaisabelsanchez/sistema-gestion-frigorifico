@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 🔐 SEGURIDAD
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-temporal')
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
     'sistema-gestion-frigorifico.onrender.com',
