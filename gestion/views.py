@@ -34,6 +34,7 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials
+from pathlib import Path
 
 from .models import (
     Cliente,
@@ -56,14 +57,10 @@ from .forms import (
 
 # 🔥 FIREBASE
 if not firebase_admin._apps:
-    firebase_credentials_raw = os.environ.get("FIREBASE_CREDENTIALS")
+    firebase_file = Path(__file__).resolve().parent.parent / "firebase.json"
 
-    if firebase_credentials_raw:
-        firebase_credentials = json.loads(firebase_credentials_raw)
-        cred = credentials.Certificate(firebase_credentials)
-        firebase_admin.initialize_app(cred)
-    else:
-        print("FIREBASE_CREDENTIALS no configurada")
+    cred = credentials.Certificate(str(firebase_file))
+    firebase_admin.initialize_app(cred)
 # =========================
 # 🔐 LOGIN
 # =========================
