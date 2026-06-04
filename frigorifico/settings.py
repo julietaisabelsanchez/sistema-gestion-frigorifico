@@ -81,12 +81,14 @@ TEMPLATES = [
 # 🚀 WSGI
 WSGI_APPLICATION = 'frigorifico.wsgi.application'
 
-# 🗄️ BASE DE DATOS (Render / PostgreSQL)
+# 🗄️ BASE DE DATOS 
+url_db = 'postgresql://postgres:dSliPtMCNqtxxmtZGwlcRTLvjssQggZo@maglev.proxy.rlwy.net:41055/railway'
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
-        conn_max_age=600
-
+        default=url_db,
+        conn_max_age=600,
+        ssl_require=not DEBUG
     )
 }
 
