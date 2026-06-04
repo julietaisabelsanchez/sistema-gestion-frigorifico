@@ -26,6 +26,15 @@ class Producto(models.Model):
         return self.nombre
 
 
+class Produccion(models.Model):
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    fecha = models.DateField()
+    cantidad = models.IntegerField()
+
+    def __str__(self):
+        return f"Producción {self.producto.nombre} ({self.cantidad})"
+
+
 # =========================
 # 👨‍💼 EMPLEADOS
 # =========================
@@ -143,18 +152,3 @@ class Envio(models.Model):
 # =========================
 # 📒 CUENTA CORRIENTE
 # =========================
-class CuentaCorriente(models.Model):
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    fecha = models.DateField(auto_now_add=True)
-    descripcion = models.CharField(max_length=200, default="Venta")
-    cajas = models.IntegerField(default=0)
-    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    pago = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    def save(self, *args, **kwargs):
-        self.total = self.cajas * self.precio_unitario
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.cliente} - {self.fecha}"

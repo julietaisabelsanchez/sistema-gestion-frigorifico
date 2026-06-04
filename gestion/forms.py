@@ -1,5 +1,5 @@
 from django import forms
-from .models import Producto, Cliente, Empleado, Venta, DetalleVenta, CuentaCorriente
+from .models import Producto, Cliente, Empleado, Venta, DetalleVenta
 
 
 class ProductoForm(forms.ModelForm):
@@ -55,13 +55,3 @@ class DetalleVentaForm(forms.ModelForm):
         fields = ['producto', 'cantidad', 'subtotal']
 
 
-class CuentaCorrienteForm(forms.ModelForm):
-    class Meta:
-        model = CuentaCorriente
-        fields = [
-            'cliente',
-            'descripcion',
-            'cajas',
-            'precio_unitario',
-            'pago'
-        ]

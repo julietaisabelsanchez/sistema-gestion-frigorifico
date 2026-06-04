@@ -1,100 +1,44 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <title>Registro</title>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
   <style>
-    body {
-      font-family: Arial;
-      background: #1f2937;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-
-    .box {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      width: 300px;
-      text-align: center;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-    }
-
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #2196F3;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #1976D2;
-    }
-
-    #mensaje {
-      margin-top: 10px;
-      color: red;
-    }
+    body{ margin:0; font-family:Inter, 'Segoe UI', Arial; background:linear-gradient(180deg,#0b1220,#071023); min-height:100vh; display:flex; align-items:center; justify-content:center }
+    .card{ width:380px; background:#fff; padding:30px; border-radius:14px; box-shadow:0 10px 30px rgba(2,6,23,0.6); text-align:center }
+    h2{ margin:4px 0 18px }
+    input{ width:100%; padding:12px; margin:8px 0; border-radius:10px; border:1px solid #e6e9ee }
+    button{ width:100%; padding:12px; border-radius:10px; border:none; background:#06b6d4; color:#052022; font-weight:700; cursor:pointer }
+    .msg{ margin-top:12px; padding:10px; border-radius:8px }
+    .msg.error{ background:#fff0f0; color:#7f1d1d }
+    .meta{ margin-top:12px; color:#64748b }
+    .meta a{ color:#0ea5a4; text-decoration:none }
   </style>
 </head>
 <body>
+  <div class="card">
+    <h2>Crear cuenta</h2>
 
-<div class="box">
-  <h2>Registro</h2>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="msg {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
 
-  <input type="email" id="email" placeholder="Correo">
-  <input type="password" id="password" placeholder="Contraseña">
+    {% if error %}
+      <div class="msg error">{{ error }}</div>
+    {% endif %}
 
-  <button onclick="register()">Crear cuenta</button>
+    <form method="post">
+      {% csrf_token %}
+      <input type="email" name="email" placeholder="Correo electronico" value="{{ email|default:'' }}" required>
+      <input type="password" name="password" placeholder="Contraseña" required>
+      <button type="submit">Crear cuenta</button>
+    </form>
 
-  <p id="mensaje"></p>
-
-  <p><a href="/login/">Ir al login</a></p>
-</div>
-
-<script>
-  const firebaseConfig = {
-  apiKey: "AIzaSyBQrgT9yh_pWf1BA8ZucQkEuXSTu3mI2W0",
-  authDomain: "frigorifico-221ba.firebaseapp.com",
-  projectId: "frigorifico-221ba",
-  storageBucket: "frigorifico-221ba.firebasestorage.app",
-  messagingSenderId: "88394470433",
-  appId: "1:88394470433:web:c821d159f50a246f187f60"
-};
-
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-
-  function register() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    auth.createUserWithEmailAndPassword(email, password)
-      .then(() => {
-        document.getElementById("mensaje").innerText = "Usuario creado ✔";
-        setTimeout(() => {
-          window.location.href = "/login/";
-        }, 1500);
-      })
-      .catch(error => {
-        document.getElementById("mensaje").innerText = error.message;
-      });
-  }
-</script>
-
+    <div class="meta">
+      <a href="/login/">Ir al login</a>
+    </div>
+  </div>
 </body>
 </html>

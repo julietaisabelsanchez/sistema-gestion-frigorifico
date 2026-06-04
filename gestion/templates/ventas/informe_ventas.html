@@ -4,9 +4,17 @@
 {% block content %}
 <div class="container mt-4">
 
-    <h2 class="mb-4">📊 Informe de Ventas</h2>
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="mb-0">📊 Informe de Ventas</h2>
+            <p class="text-muted mb-0">Filtra por cliente y rango de fechas. Exporta el informe a PDF o Excel.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'informe_ventas' %}?cliente={{ cliente_id|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}&export=pdf" class="btn btn-danger">Exportar PDF</a>
+            <a href="{% url 'informe_ventas' %}?cliente={{ cliente_id|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}&export=excel" class="btn btn-success">Exportar Excel</a>
+        </div>
+    </div>
 
-    <!-- FILTRO -->
     <div class="card shadow-sm p-3 mb-4" style="max-width: 1000px;">
         <form method="GET">
             <div class="row align-items-end">
@@ -42,40 +50,46 @@
         </form>
     </div>
 
-    <!-- TABLA ABAJO -->
-    <div class="card shadow-sm p-3">
-        <h4 class="mb-4">Total vendido: ${{ total_general|intcomma }}</h4>
+    <div class="card shadow-sm p-3 mb-4">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <h5>Total ventas</h5>
+                <p class="h4 text-success">${{ total_ventas|floatformat:2|intcomma }}</p>
+            </div>
+            <div class="col-md-4">
+                <h5>Total cobros</h5>
+                <p class="h4 text-primary">${{ total_cobros|floatformat:2|intcomma }}</p>
+            </div>
+            <div class="col-md-4">
+                <h5>Deuda</h5>
+                <p class="h4 text-danger">${{ total_deuda|floatformat:2|intcomma }}</p>
+            </div>
+        </div>
 
         <div class="table-responsive">
             <table class="table table-hover table-striped">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
-                        <th>Cliente</th>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Subtotal</th>
                         <th>Fecha</th>
-                        <th>Comprobante</th>
+                        <th>Cliente</th>
+                        <th>Ventas</th>
+                        <th>Cobros</th>
+                        <th>Deuda</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    {% for venta in ventas %}
-                        {% for detalle in venta.detalleventa_set.all %}
-                        <tr>
-                            <td>{{ venta.id }}</td>
-                            <td>{{ venta.cliente.nombre }}</td>
-                            <td>{{ detalle.producto.nombre }}</td>
-                            <td>{{ detalle.cantidad }}</td>
-                            <td>${{ detalle.subtotal|intcomma }}</td>
-                            <td>{{ venta.fecha|date:"d/m/Y" }}</td>
-                            <td>{{ venta.numero_comprobante }}</td>
-                        </tr>
-                        {% endfor %}
+                    {% for row in ventas %}
+                    <tr>
+                        <td>{{ row.fecha|date:"d/m/Y" }}</td>
+                        <td>{{ row.cliente }}</td>
+                        <td>${{ row.ventas|floatformat:2|intcomma }}</td>
+                        <td>${{ row.cobros|floatformat:2|intcomma }}</td>
+                        <td>${{ row.deuda|floatformat:2|intcomma }}</td>
+                    </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center">No hay ventas registradas</td>
+                        <td colspan="5" class="text-center">No hay registros para los filtros seleccionados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

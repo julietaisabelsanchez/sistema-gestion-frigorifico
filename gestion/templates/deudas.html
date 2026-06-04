@@ -6,7 +6,10 @@
     <h2 class="mb-4">📉 Gestión de Deudas</h2>
 
     <div class="card shadow-sm p-4 mt-5">
-        <input type="text" id="buscador" class="form-control mb-4" placeholder="🔍 Buscar cliente...">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <input type="text" id="buscador" class="form-control me-3" placeholder="🔍 Buscar cliente...">
+            <a href="?export=excel" class="btn btn-success">📥 Exportar a Excel</a>
+        </div>
 
         <div class="table-responsive">
             <table class="table table-hover align-middle">
@@ -18,7 +21,7 @@
                         <th>Deuda</th>
                         <th>Fecha</th>
                         <th>Monto</th>
-                        <th>Cobrar</th>
+                        <th>Aceptar</th>
                         <th>PDF</th>
                     </tr>
                 </thead>
@@ -58,7 +61,7 @@
 
                             <td>
                                 <button type="submit" class="btn btn-success">
-                                    💵 Cobrar
+                                    ✅ Aceptar
                                 </button>
                             </td>
 

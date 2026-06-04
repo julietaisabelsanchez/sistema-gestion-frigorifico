@@ -1,7 +1,10 @@
+import csv
+import io
 import json
 import os
 from decimal import Decimal
 from datetime import date, datetime
+from pathlib import Path
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
@@ -9,50 +12,30 @@ from django.db.models import Sum
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
 from django.conf import settings
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth.models import User
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 
-
-
-from django.shortcuts import render
-from django.http import HttpResponse
-from .models import CuentaCorriente, Cliente
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from django.shortcuts import render
-from .models import Venta, Cliente
-from django.shortcuts import render
-from .models import Venta, Cliente
-from django.shortcuts import render
-from .models import Venta, Cliente
-from reportlab.pdfgen import canvas
-from django.http import HttpResponse
-import os
-import json
-from pathlib import Path
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
 from .models import (
     Cliente,
     Producto,
+    Produccion,
     Venta,
     DetalleVenta,
     Pago,
     Caja,
     MovimientoCaja,
     Empleado,
-    Envio,
-    CuentaCorriente
+    Envio
 )
 
 from .forms import (
     EmpleadoForm,
-    VentaForm,
-    CuentaCorrienteForm
+    VentaForm
 )
 
 
@@ -60,27 +43,84 @@ from .forms import (
 # 🔐 LOGIN
 # =========================
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('/')
+
+    context = {}
     if request.method == "POST":
-        username = request.POST.get("email")
+        email = request.POST.get("email")
         password = request.POST.get("password")
 
-        user = authenticate(
-            request,
-            username=username,
-            password=password
-        )
+        if not email or not password:
+            context['error'] = 'El usuario y la contraseña son obligatorios.'
+            context['email'] = email
+            return render(request, "login.html", context)
 
-        if user:
+        # Intenta autenticar usando el valor como username (por compatibilidad)
+        user = authenticate(request, username=email, password=password)
+
+        # Si no se autenticó, intenta buscar un usuario por email y usar su username
+        if not user:
+            try:
+                user_obj = User.objects.get(email__iexact=email)
+                user = authenticate(request, username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                # Si no existe un usuario Django para ese email, crearlo automáticamente
+                # Esto ayuda a migrar usuarios que antes usaban Firebase o un sistema externo
+                username_base = (email.split('@')[0]) if email else 'user'
+                username_candidate = username_base
+                suffix = 1
+                while User.objects.filter(username=username_candidate).exists():
+                    username_candidate = f"{username_base}{suffix}"
+                    suffix += 1
+
+                user = User.objects.create_user(username=username_candidate, email=email, password=password)
+                user.save()
+                # autenticar el usuario nuevo
+                user = authenticate(request, username=username_candidate, password=password)
+                if user:
+                    messages.info(request, 'Cuenta creada automáticamente. Si no pediste esto, cambia tu contraseña.')
+
+        if user is not None:
             login(request, user)
-            return redirect("/")
-        else:
-            return render(
-                request,
-                "login.html",
-                {"error": "Usuario o contraseña incorrectos"}
-            )
+            next_url = request.POST.get('next') or request.GET.get('next') or '/'
+            return redirect(next_url)
 
-    return render(request, "login.html")
+        context['error'] = 'Usuario o contraseña incorrectos.'
+        context['email'] = email
+
+    return render(request, "login.html", context)
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')
+    
+
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('/')
+
+    if request.method == 'POST':
+        username = request.POST.get('username') or request.POST.get('email')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+
+        if not email or not password:
+            messages.error(request, 'Email y contraseña son requeridos')
+            return render(request, 'registro.html', {'email': email})
+
+        # Evitar duplicados
+        if User.objects.filter(email__iexact=email).exists():
+            messages.error(request, 'Ya existe un usuario con ese correo')
+            return render(request, 'registro.html', {'email': email})
+
+        user = User.objects.create_user(username=username, email=email, password=password)
+        user.save()
+        messages.success(request, 'Cuenta creada correctamente. Inicia sesión.')
+        return redirect('login')
+
+    return render(request, 'registro.html')
 # =========================
 # 📊 DASHBOARD
 # =========================
@@ -104,13 +144,58 @@ def agregar_producto(request):
     if request.method == 'POST':
         Producto.objects.create(
             nombre=request.POST.get('nombre'),
-            precio=request.POST.get('precio'),
-            stock=request.POST.get('stock')
+            tipo='Producto',
+            precio=request.POST.get('precio') or 0,
+            stock=0
         )
         return redirect('productos')
 
     return render(request, 'agregar_producto.html')
 
+
+def agregar_produccion(request):
+    productos = Producto.objects.filter(nombre__icontains="grasa") | Producto.objects.filter(nombre__icontains="caja")
+    context = {
+        'productos': productos,
+        'errors': [],
+        'data': {}
+    }
+
+    if request.method == 'POST':
+        producto_id = request.POST.get('producto')
+        fecha = request.POST.get('fecha')
+        cantidad = request.POST.get('cantidad')
+
+        context['data'] = {
+            'producto': producto_id,
+            'fecha': fecha,
+            'cantidad': cantidad
+        }
+
+        if not producto_id or not fecha or not cantidad:
+            context['errors'].append('Todos los campos son obligatorios.')
+        else:
+            try:
+                cantidad_int = int(cantidad)
+                if cantidad_int <= 0:
+                    raise ValueError
+
+                producto = Producto.objects.get(id=int(producto_id))
+                Produccion.objects.create(
+                    producto=producto,
+                    fecha=fecha,
+                    cantidad=cantidad_int
+                )
+
+                producto.stock += cantidad_int
+                producto.save()
+
+                messages.success(request, 'Producción registrada y stock actualizado correctamente.')
+                return redirect('stock_grasas_cajas')
+            except (ValueError, Producto.DoesNotExist):
+                context['errors'].append('Seleccione un producto válido y una cantidad mayor a 0.')
+
+    return render(request, 'agregar_produccion.html', context)
 
 
 # 📦 STOCK
@@ -172,6 +257,8 @@ def ventas(request):
         cliente_id = request.POST.get('cliente')
         producto_id = request.POST.get('producto')
         cantidad = int(request.POST.get('cantidad', 0))
+        fecha_str = request.POST.get('fecha')
+        numero_comprobante = request.POST.get('numero_comprobante')
 
         if cliente_id and producto_id and cantidad > 0:
             cliente = Cliente.objects.get(pk=cliente_id)
@@ -181,10 +268,20 @@ def ventas(request):
                 producto.stock -= cantidad
                 producto.save()
 
+                venta_fecha = date.today()
+                if fecha_str:
+                    try:
+                        venta_fecha = date.fromisoformat(fecha_str)
+                    except ValueError:
+                        venta_fecha = date.today()
+
+                if not numero_comprobante:
+                    numero_comprobante = f"F-{Venta.objects.count() + 1:05d}"
+
                 venta = Venta.objects.create(
                     cliente=cliente,
-                    fecha=date.today(),
-                    numero_comprobante=f"F-{Venta.objects.count() + 1:05d}"
+                    fecha=venta_fecha,
+                    numero_comprobante=numero_comprobante
                 )
 
                 DetalleVenta.objects.create(
@@ -476,6 +573,10 @@ def deudas(request):
             'deuda': deuda,
         })
 
+    export = request.GET.get('export')
+    if export == 'excel':
+        return export_deudas_csv(datos)
+
     return render(request, 'deudas.html', {'datos': datos})
 
 def registrar_pago(request, cliente_id):
@@ -620,29 +721,174 @@ def editar_venta(request, id):
         'detalle': detalle
     })
 
-def cuenta_corriente(request):
-    movimientos = CuentaCorriente.objects.all().order_by('fecha')
 
-    saldo = 0
-    for mov in movimientos:
-        saldo += mov.total - mov.pago
-        mov.saldo = saldo
+def export_ventas_csv(rows):
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(['Fecha', 'Cliente', 'Ventas', 'Cobros', 'Deuda'])
 
-    return render(request, 'cuenta_corriente.html', {
-        'movimientos': movimientos
+    for row in rows:
+        writer.writerow([
+            row['fecha'].strftime('%d/%m/%Y'),
+            row['cliente'],
+            f"{row['ventas']:.2f}",
+            f"{row['cobros']:.2f}",
+            f"{row['deuda']:.2f}"
+        ])
+
+    response = HttpResponse(buffer.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="informe_ventas.csv"'
+    return response
+
+
+def export_ventas_pdf(rows, total_ventas, total_cobros, total_deuda):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="informe_ventas.pdf"'
+
+    p = canvas.Canvas(response, pagesize=A4)
+    width, height = A4
+    y = height - 80
+
+    p.setFont('Helvetica-Bold', 16)
+    p.drawString(40, y, 'Informe de Ventas con Cobros y Deuda')
+    y -= 30
+
+    p.setFont('Helvetica', 11)
+    p.drawString(40, y, f'Total ventas: ${total_ventas:,.2f}')
+    p.drawString(260, y, f'Total cobros: ${total_cobros:,.2f}')
+    p.drawString(460, y, f'Total deuda: ${total_deuda:,.2f}')
+    y -= 40
+
+    p.setFont('Helvetica-Bold', 10)
+    p.drawString(40, y, 'Fecha')
+    p.drawString(130, y, 'Cliente')
+    p.drawString(300, y, 'Ventas')
+    p.drawString(380, y, 'Cobros')
+    p.drawString(450, y, 'Deuda')
+    y -= 20
+
+    p.setFont('Helvetica', 10)
+    for row in rows:
+        if y < 70:
+            p.showPage()
+            y = height - 50
+            p.setFont('Helvetica-Bold', 10)
+            p.drawString(40, y, 'Fecha')
+            p.drawString(130, y, 'Cliente')
+            p.drawString(300, y, 'Ventas')
+            p.drawString(380, y, 'Cobros')
+            p.drawString(450, y, 'Deuda')
+            y -= 20
+            p.setFont('Helvetica', 10)
+
+        p.drawString(40, y, row['fecha'].strftime('%d/%m/%Y'))
+        p.drawString(130, y, row['cliente'][:24])
+        p.drawString(300, y, f"${row['ventas']:,.2f}")
+        p.drawString(380, y, f"${row['cobros']:,.2f}")
+        p.drawString(450, y, f"${row['deuda']:,.2f}")
+        y -= 18
+
+    p.showPage()
+    p.save()
+    return response
+
+
+def export_deudas_csv(rows):
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(['Cliente', 'Total Comprado', 'Total Pagado', 'Deuda'])
+
+    for row in rows:
+        writer.writerow([
+            row['cliente'],
+            f"{row['ventas']:.2f}",
+            f"{row['pagos']:.2f}",
+            f"{row['deuda']:.2f}"
+        ])
+
+    response = HttpResponse(buffer.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="deudas.csv"'
+    return response
+
+
+def informe_ventas(request):
+    cliente_id = request.GET.get('cliente')
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+
+    ventas = Venta.objects.select_related('cliente').prefetch_related(
+        'detalleventa_set__producto'
+    ).all().order_by('-fecha')
+    pagos = Pago.objects.select_related('cliente').all().order_by('-fecha')
+
+    if cliente_id:
+        ventas = ventas.filter(cliente_id=cliente_id)
+        pagos = pagos.filter(cliente_id=cliente_id)
+
+    if fecha_desde:
+        ventas = ventas.filter(fecha__gte=fecha_desde)
+        pagos = pagos.filter(fecha__date__gte=fecha_desde)
+
+    if fecha_hasta:
+        ventas = ventas.filter(fecha__lte=fecha_hasta)
+        pagos = pagos.filter(fecha__date__lte=fecha_hasta)
+
+    clientes = Cliente.objects.all()
+
+    rows = {}
+    for venta in ventas:
+        total_venta = sum([detalle.subtotal for detalle in venta.detalleventa_set.all()])
+        key = (venta.cliente_id, venta.fecha)
+        if key not in rows:
+            rows[key] = {
+                'fecha': venta.fecha,
+                'cliente': venta.cliente.nombre,
+                'ventas': 0,
+                'cobros': 0,
+                'deuda': 0
+            }
+        rows[key]['ventas'] += total_venta
+
+    for pago in pagos:
+        pago_fecha = pago.fecha.date() if isinstance(pago.fecha, datetime) else pago.fecha
+        key = (pago.cliente_id, pago_fecha)
+        if key not in rows:
+            rows[key] = {
+                'fecha': pago_fecha,
+                'cliente': pago.cliente.nombre,
+                'ventas': 0,
+                'cobros': 0,
+                'deuda': 0
+            }
+        rows[key]['cobros'] += pago.monto
+
+    report_rows = []
+    for row in rows.values():
+        row['deuda'] = row['ventas'] - row['cobros']
+        report_rows.append(row)
+
+    report_rows.sort(key=lambda item: (item['fecha'], item['cliente']))
+
+    total_ventas = sum([row['ventas'] for row in report_rows])
+    total_cobros = sum([row['cobros'] for row in report_rows])
+    total_deuda = sum([row['deuda'] for row in report_rows])
+
+    export = request.GET.get('export')
+    if export == 'excel':
+        return export_ventas_csv(report_rows)
+    if export == 'pdf':
+        return export_ventas_pdf(report_rows, total_ventas, total_cobros, total_deuda)
+
+    return render(request, 'ventas/informe_ventas.html', {
+        'ventas': report_rows,
+        'clientes': clientes,
+        'cliente_id': cliente_id,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'total_ventas': total_ventas,
+        'total_cobros': total_cobros,
+        'total_deuda': total_deuda,
     })
-
-
-def nueva_cuenta_corriente(request):
-    if request.method == 'POST':
-        form = CuentaCorrienteForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('cuenta_corriente')
-    else:
-        form = CuentaCorrienteForm()
-
-    return render(request, 'form.html', {'form': form})
 
 
 def eliminar_pago_cliente(request, cliente_id):
@@ -651,267 +897,5 @@ def eliminar_pago_cliente(request, cliente_id):
     return redirect('deudas')
 
 
-def editar_cuenta_corriente(request, id):
-    movimiento = get_object_or_404(CuentaCorriente, id=id)
 
-    if request.method == 'POST':
-        movimiento.cliente_id = request.POST.get('cliente')
-        movimiento.descripcion = request.POST.get('descripcion')
-        movimiento.cajas = int(request.POST.get('cajas'))
-        movimiento.precio_unitario = float(request.POST.get('precio_unitario'))
-        movimiento.pago = float(request.POST.get('pago') or 0)
 
-        movimiento.save()
-
-        return redirect('informe_cuenta_corriente')
-
-    clientes = Cliente.objects.all().order_by('nombre')
-
-    return render(request, 'editar_cuenta_corriente.html', {
-        'movimiento': movimiento,
-        'clientes': clientes
-    })
-
-
-def informe_cuenta_corriente(request):
-    movimientos = CuentaCorriente.objects.select_related('cliente').all().order_by('fecha')
-
-    cliente_id = request.GET.get('cliente')
-    fecha_desde = request.GET.get('fecha_desde')
-    fecha_hasta = request.GET.get('fecha_hasta')
-
-    if cliente_id in ["None", "", None]:
-        cliente_id = None
-
-    if fecha_desde in ["None", "", None]:
-        fecha_desde = None
-
-    if fecha_hasta in ["None", "", None]:
-        fecha_hasta = None
-
-    if cliente_id:
-        movimientos = movimientos.filter(cliente_id=int(cliente_id))
-
-    if fecha_desde:
-        movimientos = movimientos.filter(fecha__gte=fecha_desde)
-
-    if fecha_hasta:
-        movimientos = movimientos.filter(fecha__lte=fecha_hasta)
-
-    saldo_acumulado = 0
-    for mov in movimientos:
-        saldo_acumulado += mov.total - mov.pago
-        mov.saldo = saldo_acumulado
-
-    clientes = Cliente.objects.all().order_by('nombre')
-
-    total_ventas = movimientos.aggregate(total=Sum('total'))['total'] or 0
-    total_cobros = movimientos.aggregate(total=Sum('pago'))['total'] or 0
-    saldo_final = total_ventas - total_cobros
-
-    cliente_nombre = "Todos los clientes"
-
-    if cliente_id:
-        cliente_obj = Cliente.objects.filter(id=cliente_id).first()
-        if cliente_obj:
-            cliente_nombre = cliente_obj.nombre
-
-    if movimientos.exists():
-        if saldo_final > 0:
-            estado = "mantiene deuda pendiente y requiere seguimiento de cobranza."
-        elif saldo_final == 0:
-            estado = "se encuentra al día con sus pagos."
-        else:
-            estado = "presenta saldo a favor."
-
-        informe_ia = f"""
-Cliente analizado: {cliente_nombre}
-
-Durante el período seleccionado se registraron ventas por ${total_ventas},
-cobros por ${total_cobros}
-y un saldo pendiente de ${saldo_final}.
-
-Análisis automático:
-El cliente {estado}
-"""
-    else:
-        informe_ia = "No se encontraron movimientos para los filtros seleccionados."
-
-    return render(request, 'informe_cuenta_corriente.html', {
-        'movimientos': movimientos,
-        'clientes': clientes,
-        'cliente_id': cliente_id,
-        'fecha_desde': fecha_desde,
-        'fecha_hasta': fecha_hasta,
-        'total_ventas': total_ventas,
-        'total_cobros': total_cobros,
-        'saldo_final': saldo_final,
-        'informe_ia': informe_ia,
-    })
-
-
-def informe_cuenta_corriente_pdf(request):
-    movimientos = CuentaCorriente.objects.select_related('cliente').all().order_by('fecha')
-
-    cliente_id = request.GET.get('cliente')
-    fecha_desde = request.GET.get('fecha_desde')
-    fecha_hasta = request.GET.get('fecha_hasta')
-
-    if cliente_id in ["None", "", None]:
-        cliente_id = None
-
-    if fecha_desde in ["None", "", None]:
-        fecha_desde = None
-
-    if fecha_hasta in ["None", "", None]:
-        fecha_hasta = None
-
-    if cliente_id:
-        movimientos = movimientos.filter(cliente_id=int(cliente_id))
-
-    if fecha_desde:
-        movimientos = movimientos.filter(fecha__gte=fecha_desde)
-
-    if fecha_hasta:
-        movimientos = movimientos.filter(fecha__lte=fecha_hasta)
-
-    saldo_acumulado = 0
-    for mov in movimientos:
-        saldo_acumulado += mov.total - mov.pago
-        mov.saldo = saldo_acumulado
-
-    total_ventas = movimientos.aggregate(total=Sum('total'))['total'] or 0
-    total_cobros = movimientos.aggregate(total=Sum('pago'))['total'] or 0
-    saldo_final = total_ventas - total_cobros
-
-    cliente_nombre = "Todos los clientes"
-    if cliente_id:
-        cliente_obj = Cliente.objects.filter(id=cliente_id).first()
-        if cliente_obj:
-            cliente_nombre = cliente_obj.nombre
-
-    if saldo_final > 0:
-        estado = "mantiene deuda pendiente y requiere seguimiento."
-    elif saldo_final == 0:
-        estado = "se encuentra al día con sus pagos."
-    else:
-        estado = "presenta saldo a favor."
-
-    informe_ia = [
-        f"Cliente: {cliente_nombre}",
-        f"Ventas registradas: ${total_ventas}",
-        f"Cobros registrados: ${total_cobros}",
-        f"Saldo pendiente: ${saldo_final}",
-        f"Analisis automatico: El cliente {estado}"
-    ]
-
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="informe_cuenta_corriente.pdf"'
-
-    p = canvas.Canvas(response, pagesize=A4)
-    width, height = A4
-
-    p.setFont("Helvetica-Bold", 18)
-    p.drawString(170, height - 50, "INFORME CUENTA CORRIENTE")
-
-    p.setFont("Helvetica", 10)
-    texto = p.beginText(40, height - 90)
-
-    for linea in informe_ia:
-        texto.textLine(linea)
-
-    p.drawText(texto)
-
-    p.rect(40, height - 190, 160, 50)
-    p.drawString(80, height - 165, "TOTAL VENTAS")
-    p.drawString(95, height - 180, f"${total_ventas}")
-
-    p.rect(220, height - 190, 160, 50)
-    p.drawString(255, height - 165, "TOTAL COBROS")
-    p.drawString(275, height - 180, f"${total_cobros}")
-
-    p.rect(400, height - 190, 160, 50)
-    p.drawString(430, height - 165, "SALDO FINAL")
-    p.drawString(455, height - 180, f"${saldo_final}")
-
-    y = height - 260
-
-    columnas = [
-        ("Fecha", 40, 70),
-        ("Cliente", 110, 130),
-        ("Descripción", 240, 140),
-        ("Venta", 380, 60),
-        ("Cobro", 440, 60),
-        ("Saldo", 500, 60),
-    ]
-
-    p.setFillColor(colors.black)
-    for titulo, x, ancho in columnas:
-        p.rect(x, y, ancho, 25, fill=1)
-
-    p.setFillColor(colors.white)
-    p.setFont("Helvetica-Bold", 9)
-
-    for titulo, x, ancho in columnas:
-        p.drawString(x + 5, y + 8, titulo)
-
-    y -= 25
-    p.setFillColor(colors.black)
-    p.setFont("Helvetica", 8)
-
-    for mov in movimientos:
-        if y < 50:
-            p.showPage()
-            y = height - 50
-
-        datos = [
-            (mov.fecha.strftime("%d/%m/%Y"), 40, 70),
-            (mov.cliente.nombre[:20], 110, 130),
-            (mov.descripcion[:25], 240, 140),
-            (f"${mov.total}", 380, 60),
-            (f"${mov.pago}", 440, 60),
-            (f"${mov.saldo}", 500, 60),
-        ]
-
-        for texto, x, ancho in datos:
-            p.rect(x, y, ancho, 25)
-            p.drawString(x + 3, y + 8, str(texto))
-
-        y -= 25
-
-    p.save()
-    return response
-
-def informe_ventas(request):
-    ventas = Venta.objects.select_related('cliente').prefetch_related(
-        'detalleventa_set__producto'
-    ).all().order_by('-fecha')
-
-    cliente_id = request.GET.get('cliente')
-    fecha_desde = request.GET.get('fecha_desde')
-    fecha_hasta = request.GET.get('fecha_hasta')
-
-    if cliente_id:
-        ventas = ventas.filter(cliente_id=cliente_id)
-
-    if fecha_desde:
-        ventas = ventas.filter(fecha__gte=fecha_desde)
-
-    if fecha_hasta:
-        ventas = ventas.filter(fecha__lte=fecha_hasta)
-
-    clientes = Cliente.objects.all()
-
-    total_general = 0
-    for venta in ventas:
-        for detalle in venta.detalleventa_set.all():
-            total_general += detalle.subtotal
-
-    return render(request, 'ventas/informe_ventas.html', {
-        'ventas': ventas,
-        'clientes': clientes,
-        'total_general': total_general,
-        'cliente_id': cliente_id,
-        'fecha_desde': fecha_desde,
-        'fecha_hasta': fecha_hasta,
-    })

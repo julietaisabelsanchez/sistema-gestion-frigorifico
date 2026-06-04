@@ -5,96 +5,106 @@
     {% load static %}
     <meta charset="UTF-8">
     <title>Login - Frigorífico</title>
-
-```
-<style>
-    body {
-        margin: 0;
-        font-family: 'Segoe UI', sans-serif;
-        background: linear-gradient(135deg, #1f2937, #111827);
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .login-container {
-        background: white;
-        padding: 35px 25px;
-        border-radius: 15px;
-        width: 320px;
-        text-align: center;
-        box-shadow: 0px 10px 30px rgba(0,0,0,0.4);
-    }
-
-    .logo {
-        width: 150px;
-        margin-bottom: 30px;
-    }
-
-    input {
-        width: 100%;
-        padding: 10px;
-        margin: 8px 0;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-    }
-
-    button {
-        width: 100%;
-        padding: 10px;
-        margin-top: 10px;
-        border-radius: 8px;
-        border: none;
-        cursor: pointer;
-        font-weight: bold;
-        background: #4CAF50;
-        color: white;
-    }
-
-    .error {
-        color: red;
-        margin-top: 10px;
-    }
-</style>
-```
-
+    <style>
+        :root{
+            --bg1:#0f1724; --bg2:#0b1220; --card:#0f1724;
+            --accent:#2dd4bf; --accent-dark:#14b8a6; --muted:#9ca3af;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; font-family: Inter, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(180deg,var(--bg1),var(--bg2));
+            min-height:100vh; display:flex; align-items:center; justify-content:center;
+            color:#0f1724;
+        }
+        .card{
+            width:380px; background:linear-gradient(180deg,#ffffff 0%, #fbfbfb 100%);
+            border-radius:14px; padding:34px; box-shadow:0 10px 30px rgba(2,6,23,0.6);
+            text-align:center;
+        }
+        .logo{width:110px; margin:0 auto 18px; display:block}
+        h2{margin:6px 0 18px; font-size:22px}
+        form .field{margin-bottom:12px}
+        .password-wrapper{position:relative}
+        .password-wrapper input{padding-right:48px}
+        .toggle-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;padding:6px;border-radius:8px;color:var(--muted)}
+        .toggle-btn svg{width:20px;height:20px}
+        input[type=text], input[type=password], input[type=email]{
+            width:100%; padding:12px 14px; border-radius:10px; border:1px solid #e6e9ee;
+            background:#fff; font-size:14px; outline:none
+        }
+        input:focus{box-shadow:0 0 0 4px rgba(45,212,191,0.08); border-color:var(--accent-dark)}
+        button.primary{width:100%; padding:12px; border-radius:10px; border:none; background:var(--accent); color:#042022; font-weight:700; cursor:pointer}
+        .meta{margin-top:12px; font-size:14px; color:var(--muted)}
+        .meta a{color:var(--accent-dark); text-decoration:none}
+        .msg{margin-top:12px; padding:10px; border-radius:8px}
+        .msg.error{background:#ffe6e6; color:#9b1c1c}
+        .msg.info{background:#e6fffa; color:#064e3b}
+    </style>
 </head>
 
 <body>
 
 <div class="login-container">
+    <div class="card">
+        <img src="{% static 'logo.png' %}" class="logo" alt="logo">
+        <h2>Iniciar sesión</h2>
 
-```
-<img src="{% static 'logo.png' %}" class="logo">
+        <form method="POST">
+            {% csrf_token %}
+            <div class="field">
+                <input type="text" name="email" placeholder="Usuario o correo" value="{{ email|default:'' }}" required>
+            </div>
+            <div class="field password-wrapper">
+                <input id="passwordInput" type="password" name="password" placeholder="Contraseña" required>
+                <button type="button" id="togglePassword" class="toggle-btn" aria-label="Mostrar contraseña">
+                    <svg id="iconEye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#0f1724" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#0f1724" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+            <div class="field">
+                <button class="primary" type="submit">Ingresar</button>
+            </div>
+        </form>
 
-<h2>Iniciar Sesión</h2>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="msg {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
 
-<form method="POST">
-    {% csrf_token %}
+        {% if error %}
+            <div class="msg error">{{ error }}</div>
+        {% endif %}
 
-    <input type="text"
-           name="email"
-           placeholder="Usuario"
-           required>
-
-    <input type="password"
-           name="password"
-           placeholder="Contraseña"
-           required>
-
-    <button type="submit">
-        Ingresar
-    </button>
-</form>
-
-{% if error %}
-    <p class="error">{{ error }}</p>
-{% endif %}
-```
-
+        <div class="meta">
+            ¿No tenés cuenta? <a href="/registro/">Regístrate</a>
+            <br>
+            <a href="/password-reset/">¿Olvidaste tu contraseña?</a>
+        </div>
+    </div>
 </div>
+
+<script>
+  (function(){
+    const toggle = document.getElementById('togglePassword');
+    const input = document.getElementById('passwordInput');
+    const icon = document.getElementById('iconEye');
+    if(!toggle || !input) return;
+    toggle.addEventListener('click', function(){
+      const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+      input.setAttribute('type', type);
+      // swap icon simple: change fill of circle or rotate
+      if(type === 'text'){
+        // eye with slash
+        icon.innerHTML = '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-6 0-10-7-10-7a20.67 20.67 0 0 1 5.06-4.94" stroke="#0f1724" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 1l22 22" stroke="#0f1724" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>';
+        toggle.setAttribute('aria-label','Ocultar contraseña');
+      } else {
+        icon.innerHTML = '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#0f1724" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#0f1724" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>';
+        toggle.setAttribute('aria-label','Mostrar contraseña');
+      }
+    });
+  })();
+</script>
 
 </body>
 </html>
