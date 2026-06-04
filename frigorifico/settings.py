@@ -9,21 +9,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 🔐 SEGURIDAD
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-temporal')
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'sistema.my',
-    'sistema-gestion-frigorifico-production.up.railway.app'
+    'sistema-gestion-frigorifico-production.up.railway.app',
+    '*.up.railway.app',
+    '*.railway.app'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://web-frigorifico.onrender.com"
+    "https://web-frigorifico.onrender.com",
+    "https://*.up.railway.app",
+    "https://*.railway.app"
 ]
 
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
 
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
@@ -82,11 +86,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'frigorifico.wsgi.application'
 
 # 🗄️ BASE DE DATOS 
-url_db = 'postgresql://postgres:dSliPtMCNqtxxmtZGwlcRTLvjssQggZo@maglev.proxy.rlwy.net:41055/railway'
-
 DATABASES = {
     'default': dj_database_url.config(
-        default=url_db,
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
         conn_max_age=600,
         ssl_require=not DEBUG
     )
@@ -138,3 +140,4 @@ SIMPLE_JWT = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
