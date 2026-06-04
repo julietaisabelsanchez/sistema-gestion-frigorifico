@@ -56,13 +56,14 @@ from .forms import (
 
 # 🔥 FIREBASE
 if not firebase_admin._apps:
-    firebase_credentials = json.loads(
-        os.environ.get("FIREBASE_CREDENTIALS")
-    )
+    firebase_credentials_raw = os.environ.get("FIREBASE_CREDENTIALS")
 
-    cred = credentials.Certificate(firebase_credentials)
-    firebase_admin.initialize_app(cred)
-
+    if firebase_credentials_raw:
+        firebase_credentials = json.loads(firebase_credentials_raw)
+        cred = credentials.Certificate(firebase_credentials)
+        firebase_admin.initialize_app(cred)
+    else:
+        print("FIREBASE_CREDENTIALS no configurada")
 # =========================
 # 🔐 LOGIN
 # =========================
