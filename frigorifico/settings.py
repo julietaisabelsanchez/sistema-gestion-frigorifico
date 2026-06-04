@@ -12,10 +12,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-temporal')
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'sistema-gestion-frigorifico.onrender.com',
     'localhost',
     '127.0.0.1',
-    'sistema.my'
+    'sistema.my',
+    'sistema-gestion-frigorifico-production.up.railway.app'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
