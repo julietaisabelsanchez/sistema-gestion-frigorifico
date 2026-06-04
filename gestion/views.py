@@ -14,8 +14,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 
-import firebase_admin
-from firebase_admin import credentials, auth
+
+
 from django.shortcuts import render
 from django.http import HttpResponse
 from .models import CuentaCorriente, Cliente
@@ -32,10 +32,10 @@ from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 import os
 import json
-import firebase_admin
-from firebase_admin import credentials
 from pathlib import Path
-
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
 from .models import (
     Cliente,
     Producto,
@@ -55,51 +55,37 @@ from .forms import (
     CuentaCorrienteForm
 )
 
-# 🔥 FIREBASE
-if not firebase_admin._apps:
-    firebase_file = Path(__file__).resolve().parent.parent / "firebase.json"
 
-    cred = credentials.Certificate(str(firebase_file))
-    firebase_admin.initialize_app(cred)
 # =========================
 # 🔐 LOGIN
 # =========================
-def requiere_login(request):
-    return request.session.get("uid")
-
-
 def login_view(request):
-    return render(request, "login.html")
-
-
-def registro_view(request):
-    return render(request, "registro.html")
-
-
-@csrf_exempt
-def verificar_token(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        token = data.get("token")
+        username = request.POST.get("email")
+        password = request.POST.get("password")
 
-        try:
-            decoded_token = auth.verify_id_token(token)
-            request.session['uid'] = decoded_token['uid']
-            return JsonResponse({"status": "ok"})
-        except Exception as e:
-            return JsonResponse({"status": "error", "mensaje": str(e)})
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
 
+        if user:
+            login(request, user)
+            return redirect("/")
+        else:
+            return render(
+                request,
+                "login.html",
+                {"error": "Usuario o contraseña incorrectos"}
+            )
 
-def logout_view(request):
-    request.session.flush()
-    return redirect('/login/')
-
-
+    return render(request, "login.html")
 # =========================
 # 📊 DASHBOARD
 # =========================
 def dashboard(request):
-    if not requiere_login(request):
+    if not request.user.is_authenticated:
         return redirect("/login/")
 
     return render(request, 'dashboard.html')
