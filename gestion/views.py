@@ -519,22 +519,24 @@ def datos_dashboard(request):
 
     for venta in ventas_recientes:
         fechas.append(venta.fecha.strftime('%d/%m'))
-        total_venta = venta.detalleventa_set.aggregate
-        total=Sum('subtotal')
+        total_venta = venta.detalleventa_set.aggregate(
+            total=Sum('subtotal')
+        ).get('total') or 0
+        totales.append(total_venta)
 
     # 💰 TOTAL VENTAS
     total_ventas = Venta.objects.aggregate(
-        Sum('detalleventa__subtotal')
-    )['total__sum'] or 0
+        total=Sum('detalleventa__subtotal')
+    ).get('total') or 0
 
     # 💳 TOTAL PAGADO
     total_pagado_ventas = Venta.objects.aggregate(
-        Sum('monto_pagado')
-    )['monto_pagado__sum'] or 0
+        total=Sum('monto_pagado')
+    ).get('total') or 0
 
     pagos_extra = Pago.objects.aggregate(
-        Sum('monto')
-    )['monto__sum'] or 0
+        total=Sum('monto')
+    ).get('total') or 0
 
     total_pagado = total_pagado_ventas + pagos_extra
 
@@ -762,140 +764,40 @@ def export_ventas_pdf(rows, total_ventas, total_cobros, total_deuda):
     p.setFont('Helvetica-Bold', 10)
     p.drawString(40, y, 'Fecha')
     p.drawString(130, y, 'Cliente')
-    p.drawString(300, y, 'Ventas')
-    p.drawString(380, y, 'Cobros')
+    p.drawString(250, y, 'Ventas')
+    p.drawString(350, y, 'Cobros')
     p.drawString(450, y, 'Deuda')
     y -= 20
 
-    p.setFont('Helvetica', 10)
+    p.setFont('Helvetica', 9)
     for row in rows:
-        if y < 70:
-            p.showPage()
-            y = height - 50
-            p.setFont('Helvetica-Bold', 10)
-            p.drawString(40, y, 'Fecha')
-            p.drawString(130, y, 'Cliente')
-            p.drawString(300, y, 'Ventas')
-            p.drawString(380, y, 'Cobros')
-            p.drawString(450, y, 'Deuda')
-            y -= 20
-            p.setFont('Helvetica', 10)
-
         p.drawString(40, y, row['fecha'].strftime('%d/%m/%Y'))
-        p.drawString(130, y, row['cliente'][:24])
-        p.drawString(300, y, f"${row['ventas']:,.2f}")
-        p.drawString(380, y, f"${row['cobros']:,.2f}")
+        p.drawString(130, y, row['cliente'][:20])
+        p.drawString(250, y, f"${row['ventas']:,.2f}")
+        p.drawString(350, y, f"${row['cobros']:,.2f}")
         p.drawString(450, y, f"${row['deuda']:,.2f}")
-        y -= 18
+        y -= 15
 
     p.showPage()
     p.save()
+
     return response
 
 
-def export_deudas_csv(rows):
+def export_deudas_csv(datos):
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(['Cliente', 'Total Comprado', 'Total Pagado', 'Deuda'])
+    writer.writerow(['Cliente', 'Ventas', 'Pagos', 'Deuda'])
 
-    for row in rows:
+    for item in datos:
         writer.writerow([
-            row['cliente'],
-            f"{row['ventas']:.2f}",
-            f"{row['pagos']:.2f}",
-            f"{row['deuda']:.2f}"
+            item['cliente'].nombre,
+            f"{item['ventas']:.2f}",
+            f"{item['pagos']:.2f}",
+            f"{item['deuda']:.2f}"
         ])
 
     response = HttpResponse(buffer.getvalue(), content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="deudas.csv"'
     return response
-
-
-def informe_ventas(request):
-    cliente_id = request.GET.get('cliente')
-    fecha_desde = request.GET.get('fecha_desde')
-    fecha_hasta = request.GET.get('fecha_hasta')
-
-    ventas = Venta.objects.select_related('cliente').prefetch_related(
-        'detalleventa_set__producto'
-    ).all().order_by('-fecha')
-    pagos = Pago.objects.select_related('cliente').all().order_by('-fecha')
-
-    if cliente_id:
-        ventas = ventas.filter(cliente_id=cliente_id)
-        pagos = pagos.filter(cliente_id=cliente_id)
-
-    if fecha_desde:
-        ventas = ventas.filter(fecha__gte=fecha_desde)
-        pagos = pagos.filter(fecha__date__gte=fecha_desde)
-
-    if fecha_hasta:
-        ventas = ventas.filter(fecha__lte=fecha_hasta)
-        pagos = pagos.filter(fecha__date__lte=fecha_hasta)
-
-    clientes = Cliente.objects.all()
-
-    rows = {}
-    for venta in ventas:
-        total_venta = sum([detalle.subtotal for detalle in venta.detalleventa_set.all()])
-        key = (venta.cliente_id, venta.fecha)
-        if key not in rows:
-            rows[key] = {
-                'fecha': venta.fecha,
-                'cliente': venta.cliente.nombre,
-                'ventas': 0,
-                'cobros': 0,
-                'deuda': 0
-            }
-        rows[key]['ventas'] += total_venta
-
-    for pago in pagos:
-        pago_fecha = pago.fecha.date() if isinstance(pago.fecha, datetime) else pago.fecha
-        key = (pago.cliente_id, pago_fecha)
-        if key not in rows:
-            rows[key] = {
-                'fecha': pago_fecha,
-                'cliente': pago.cliente.nombre,
-                'ventas': 0,
-                'cobros': 0,
-                'deuda': 0
-            }
-        rows[key]['cobros'] += pago.monto
-
-    report_rows = []
-    for row in rows.values():
-        row['deuda'] = row['ventas'] - row['cobros']
-        report_rows.append(row)
-
-    report_rows.sort(key=lambda item: (item['fecha'], item['cliente']))
-
-    total_ventas = sum([row['ventas'] for row in report_rows])
-    total_cobros = sum([row['cobros'] for row in report_rows])
-    total_deuda = sum([row['deuda'] for row in report_rows])
-
-    export = request.GET.get('export')
-    if export == 'excel':
-        return export_ventas_csv(report_rows)
-    if export == 'pdf':
-        return export_ventas_pdf(report_rows, total_ventas, total_cobros, total_deuda)
-
-    return render(request, 'ventas/informe_ventas.html', {
-        'ventas': report_rows,
-        'clientes': clientes,
-        'cliente_id': cliente_id,
-        'fecha_desde': fecha_desde,
-        'fecha_hasta': fecha_hasta,
-        'total_ventas': total_ventas,
-        'total_cobros': total_cobros,
-        'total_deuda': total_deuda,
-    })
-
-
-def eliminar_pago_cliente(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
-    Pago.objects.filter(cliente=cliente).delete()
-    return redirect('deudas')
-
-
-
 
