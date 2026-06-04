@@ -519,22 +519,23 @@ def datos_dashboard(request):
 
     for venta in ventas_recientes:
         fechas.append(venta.fecha.strftime('%d/%m'))
-        total_venta = venta.detalleventa_set.aggregate
-        total=Sum('subtotal')
+        total_venta = venta.detalleventa_set.aggregate(
+            total=Sum('subtotal')
+        ).get('total') or 0
 
     # 💰 TOTAL VENTAS
     total_ventas = Venta.objects.aggregate(
-        Sum('detalleventa__subtotal')
-    )['total__sum'] or 0
+        total=Sum('detalleventa__subtotal')
+    ).get('total') or 0
 
     # 💳 TOTAL PAGADO
     total_pagado_ventas = Venta.objects.aggregate(
-        Sum('monto_pagado')
-    )['monto_pagado__sum'] or 0
+        total=Sum('monto_pagado')
+    ).get('total') or 0
 
     pagos_extra = Pago.objects.aggregate(
-        Sum('monto')
-    )['monto__sum'] or 0
+        total=Sum('monto')
+    ).get('total') or 0
 
     total_pagado = total_pagado_ventas + pagos_extra
 
