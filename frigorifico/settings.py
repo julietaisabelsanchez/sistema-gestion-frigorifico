@@ -12,10 +12,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-temporal')
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    'sistema.my',
-    'sistema-gestion-frigorifico-production.up.railway.app'
+    "web-production-76047.up.railway.app",
+    "localhost",
+    "127.0.0.1",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
