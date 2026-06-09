@@ -1,10 +1,13 @@
-import csv
 import io
 import json
 import os
 from decimal import Decimal
 from datetime import date, datetime
 from pathlib import Path
+
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
@@ -575,7 +578,7 @@ def deudas(request):
 
     export = request.GET.get('export')
     if export == 'excel':
-        return export_deudas_csv(datos)
+        return export_deudas_excel(datos)
 
     return render(request, 'deudas.html', {'datos': datos})
 
@@ -722,22 +725,94 @@ def editar_venta(request, id):
     })
 
 
-def export_ventas_csv(rows):
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(['Fecha', 'Cliente', 'Ventas', 'Cobros', 'Deuda'])
+def export_ventas_excel(rows):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Informe de Ventas"
 
-    for row in rows:
-        writer.writerow([
-            row['fecha'].strftime('%d/%m/%Y'),
-            row['cliente'],
-            f"{row['ventas']:.2f}",
-            f"{row['cobros']:.2f}",
-            f"{row['deuda']:.2f}"
-        ])
+    # --- Styles ---
+    header_font = Font(name="Calibri", bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(fill_type="solid", fgColor="1F4E79")
+    header_align = Alignment(horizontal="center", vertical="center")
+    total_font = Font(name="Calibri", bold=True, size=11)
+    total_fill = PatternFill(fill_type="solid", fgColor="D6E4F0")
+    currency_format = '#,##0.00'
+    thin = Side(style="thin", color="BFBFBF")
+    cell_border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    response = HttpResponse(buffer.getvalue(), content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="informe_ventas.csv"'
+    # --- Title ---
+    ws.merge_cells("A1:E1")
+    title_cell = ws["A1"]
+    title_cell.value = "Informe de Ventas con Cobros y Deuda"
+    title_cell.font = Font(name="Calibri", bold=True, size=14, color="1F4E79")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 28
+
+    ws.merge_cells("A2:E2")
+    date_cell = ws["A2"]
+    date_cell.value = f"Generado el {date.today().strftime('%d/%m/%Y')}"
+    date_cell.font = Font(name="Calibri", italic=True, size=10, color="595959")
+    date_cell.alignment = Alignment(horizontal="center")
+    ws.row_dimensions[2].height = 18
+
+    # --- Headers ---
+    headers = ["Fecha", "Cliente", "Ventas ($)", "Cobros ($)", "Deuda ($)"]
+    for col_num, header in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = cell_border
+    ws.row_dimensions[4].height = 22
+
+    # --- Data rows ---
+    for row_num, row in enumerate(rows, start=5):
+        ws.cell(row=row_num, column=1, value=row['fecha'].strftime('%d/%m/%Y')).border = cell_border
+        ws.cell(row=row_num, column=2, value=row['cliente']).border = cell_border
+
+        for col, key in [(3, 'ventas'), (4, 'cobros'), (5, 'deuda')]:
+            cell = ws.cell(row=row_num, column=col, value=float(row[key]))
+            cell.number_format = currency_format
+            cell.alignment = Alignment(horizontal="right")
+            cell.border = cell_border
+
+        # Alternate row shading
+        if row_num % 2 == 0:
+            for col in range(1, 6):
+                ws.cell(row=row_num, column=col).fill = PatternFill(fill_type="solid", fgColor="EBF3FB")
+
+    # --- Totals row ---
+    total_row = len(rows) + 5
+    ws.cell(row=total_row, column=1, value="TOTAL").font = total_font
+    ws.cell(row=total_row, column=1).fill = total_fill
+    ws.cell(row=total_row, column=1).border = cell_border
+    ws.merge_cells(f"A{total_row}:B{total_row}")
+    ws.cell(row=total_row, column=1).alignment = Alignment(horizontal="center")
+
+    for col, key in [(3, 'ventas'), (4, 'cobros'), (5, 'deuda')]:
+        total_val = sum(float(r[key]) for r in rows)
+        cell = ws.cell(row=total_row, column=col, value=total_val)
+        cell.font = total_font
+        cell.fill = total_fill
+        cell.number_format = currency_format
+        cell.alignment = Alignment(horizontal="right")
+        cell.border = cell_border
+
+    # --- Column widths ---
+    col_widths = [14, 32, 16, 16, 16]
+    for i, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    # --- Output ---
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    filename = f"informe_ventas_{date.today().strftime('%Y-%m-%d')}.xlsx"
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
 
@@ -793,21 +868,103 @@ def export_ventas_pdf(rows, total_ventas, total_cobros, total_deuda):
     return response
 
 
-def export_deudas_csv(rows):
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(['Cliente', 'Total Comprado', 'Total Pagado', 'Deuda'])
+def export_deudas_excel(rows):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Deudas por Cliente"
 
-    for row in rows:
-        writer.writerow([
-            row['cliente'],
-            f"{row['ventas']:.2f}",
-            f"{row['pagos']:.2f}",
-            f"{row['deuda']:.2f}"
-        ])
+    # --- Styles ---
+    header_font = Font(name="Calibri", bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(fill_type="solid", fgColor="1F4E79")
+    header_align = Alignment(horizontal="center", vertical="center")
+    total_font = Font(name="Calibri", bold=True, size=11)
+    total_fill = PatternFill(fill_type="solid", fgColor="D6E4F0")
+    debt_font = Font(name="Calibri", bold=True, color="C00000", size=11)
+    currency_format = '#,##0.00'
+    thin = Side(style="thin", color="BFBFBF")
+    cell_border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    response = HttpResponse(buffer.getvalue(), content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="deudas.csv"'
+    # --- Title ---
+    ws.merge_cells("A1:D1")
+    title_cell = ws["A1"]
+    title_cell.value = "Informe de Deudas por Cliente"
+    title_cell.font = Font(name="Calibri", bold=True, size=14, color="1F4E79")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 28
+
+    ws.merge_cells("A2:D2")
+    date_cell = ws["A2"]
+    date_cell.value = f"Generado el {date.today().strftime('%d/%m/%Y')}"
+    date_cell.font = Font(name="Calibri", italic=True, size=10, color="595959")
+    date_cell.alignment = Alignment(horizontal="center")
+    ws.row_dimensions[2].height = 18
+
+    # --- Headers ---
+    headers = ["Cliente", "Total Comprado ($)", "Total Pagado ($)", "Deuda ($)"]
+    for col_num, header in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = cell_border
+    ws.row_dimensions[4].height = 22
+
+    # --- Data rows ---
+    for row_num, row in enumerate(rows, start=5):
+        cliente_name = row['cliente'].nombre if hasattr(row['cliente'], 'nombre') else str(row['cliente'])
+        ws.cell(row=row_num, column=1, value=cliente_name).border = cell_border
+
+        for col, key in [(2, 'ventas'), (3, 'pagos')]:
+            cell = ws.cell(row=row_num, column=col, value=float(row[key]))
+            cell.number_format = currency_format
+            cell.alignment = Alignment(horizontal="right")
+            cell.border = cell_border
+
+        # Deuda column — highlight in red if positive
+        deuda_val = float(row['deuda'])
+        deuda_cell = ws.cell(row=row_num, column=4, value=deuda_val)
+        deuda_cell.number_format = currency_format
+        deuda_cell.alignment = Alignment(horizontal="right")
+        deuda_cell.border = cell_border
+        if deuda_val > 0:
+            deuda_cell.font = debt_font
+
+        # Alternate row shading
+        if row_num % 2 == 0:
+            for col in range(1, 5):
+                ws.cell(row=row_num, column=col).fill = PatternFill(fill_type="solid", fgColor="EBF3FB")
+
+    # --- Totals row ---
+    total_row = len(rows) + 5
+    ws.cell(row=total_row, column=1, value="TOTAL").font = total_font
+    ws.cell(row=total_row, column=1).fill = total_fill
+    ws.cell(row=total_row, column=1).border = cell_border
+    ws.cell(row=total_row, column=1).alignment = Alignment(horizontal="center")
+
+    for col, key in [(2, 'ventas'), (3, 'pagos'), (4, 'deuda')]:
+        total_val = sum(float(r[key]) for r in rows)
+        cell = ws.cell(row=total_row, column=col, value=total_val)
+        cell.font = total_font
+        cell.fill = total_fill
+        cell.number_format = currency_format
+        cell.alignment = Alignment(horizontal="right")
+        cell.border = cell_border
+
+    # --- Column widths ---
+    col_widths = [32, 20, 20, 16]
+    for i, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    # --- Output ---
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    filename = f"deudas_{date.today().strftime('%Y-%m-%d')}.xlsx"
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
 
@@ -875,7 +1032,7 @@ def informe_ventas(request):
 
     export = request.GET.get('export')
     if export == 'excel':
-        return export_ventas_csv(report_rows)
+        return export_ventas_excel(report_rows)
     if export == 'pdf':
         return export_ventas_pdf(report_rows, total_ventas, total_cobros, total_deuda)
 
