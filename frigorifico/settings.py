@@ -1,7 +1,6 @@
 from pathlib import Path
 from datetime import timedelta
 import os
-import dj_database_url
 
 # 📁 BASE DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -87,27 +86,19 @@ TEMPLATES = [
 WSGI_APPLICATION = 'frigorifico.wsgi.application'
 
 # 🗄️ BASE DE DATOS
-# Prioridad: DATABASE_URL (Railway la inyecta automáticamente).
-# Fallback: construir la URL a partir de las variables PG* individuales.
-_pg_fallback = (
-    "postgresql://{user}:{password}@{host}:{port}/{db}".format(
-        user=os.environ.get('PGUSER', 'postgres'),
-        password=os.environ.get('PGPASSWORD', ''),
-        host=os.environ.get('PGHOST', 'localhost'),
-        port=os.environ.get('PGPORT', '5432'),
-        db=os.environ.get('PGDATABASE', 'railway'),
-    )
-)
-
-_database_url = os.environ.get('DATABASE_URL', _pg_fallback)
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default=_database_url,
-        conn_max_age=600,
-        ssl_require=not DEBUG,
-        engine='django.db.backends.postgresql',
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'HOST': os.environ.get('PGHOST', 'localhost'),
+        'PORT': os.environ.get('PGPORT', '5432'),
+        'USER': os.environ.get('PGUSER', 'postgres'),
+        'PASSWORD': os.environ.get('PGPASSWORD', ''),
+        'NAME': os.environ.get('PGDATABASE', 'railway'),
+        'CONN_MAX_AGE': 600,
+        'OPTIONS': {
+            'sslmode': 'require' if not DEBUG else 'prefer',
+        }
+    }
 }
 
 # 🔐 PASSWORDS
