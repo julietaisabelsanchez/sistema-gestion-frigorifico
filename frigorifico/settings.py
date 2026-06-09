@@ -12,6 +12,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-temporal')
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    "web-production-3ad00.up.railway.app",
     "web-production-76047.up.railway.app",
     "web-frigorificochicoana.up.railway.app",
     "web-frigorificochicoana.com-ar",
@@ -20,6 +21,7 @@ ALLOWED_HOSTS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://web-production-3ad00.up.railway.app",
     "https://web-production-76047.up.railway.app",
     "https://web-frigorificochicoana.up.railway.app",
     "https://web-frigorificochicoana.com-ar",
