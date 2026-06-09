@@ -142,13 +142,32 @@ def productos(request):
 
 def agregar_producto(request):
     if request.method == 'POST':
-        Producto.objects.create(
-            nombre=request.POST.get('nombre'),
-            tipo='Producto',
-            precio=request.POST.get('precio') or 0,
-            stock=0
-        )
-        return redirect('productos')
+        nombre = request.POST.get('nombre')
+        precio = request.POST.get('precio')
+
+        # Validate inputs
+        if not nombre or not precio:
+            messages.error(request, 'Todos los campos son obligatorios.')
+            return render(request, 'agregar_producto.html')
+
+        try:
+            precio = float(precio)
+
+            if precio < 0:
+                messages.error(request, 'El precio no puede ser negativo.')
+                return render(request, 'agregar_producto.html')
+
+            Producto.objects.create(
+                nombre=nombre,
+                tipo='Producto',
+                precio=precio,
+                stock=0
+            )
+            messages.success(request, 'Producto agregado correctamente.')
+            return redirect('productos')
+        except (ValueError, TypeError):
+            messages.error(request, 'El precio debe ser un número válido.')
+            return render(request, 'agregar_producto.html')
 
     return render(request, 'agregar_producto.html')
 
@@ -645,11 +664,32 @@ def editar_producto(request, id):
     producto = get_object_or_404(Producto, id=id)
 
     if request.method == 'POST':
-        producto.nombre = request.POST.get('nombre')
-        producto.precio = request.POST.get('precio')
-        producto.stock = request.POST.get('stock')
-        producto.save()
-        return redirect('productos')
+        nombre = request.POST.get('nombre')
+        precio = request.POST.get('precio')
+        stock = request.POST.get('stock')
+
+        # Validate inputs
+        if not nombre or not precio or not stock:
+            messages.error(request, 'Todos los campos son obligatorios.')
+            return render(request, 'editar_producto.html', {'producto': producto})
+
+        try:
+            precio = float(precio)
+            stock = int(stock)
+
+            if precio < 0 or stock < 0:
+                messages.error(request, 'El precio y stock no pueden ser negativos.')
+                return render(request, 'editar_producto.html', {'producto': producto})
+
+            producto.nombre = nombre
+            producto.precio = precio
+            producto.stock = stock
+            producto.save()
+            messages.success(request, 'Producto actualizado correctamente.')
+            return redirect('productos')
+        except (ValueError, TypeError):
+            messages.error(request, 'El precio debe ser un número y el stock un número entero.')
+            return render(request, 'editar_producto.html', {'producto': producto})
 
     return render(request, 'editar_producto.html', {'producto': producto})
 def cambiar_stock(request, id):
