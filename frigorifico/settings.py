@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+import dj_database_url
 
 # 📁 BASE DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -86,19 +87,19 @@ TEMPLATES = [
 WSGI_APPLICATION = 'frigorifico.wsgi.application'
 
 # 🗄️ BASE DE DATOS
+_pg_host = os.environ.get('PGHOST', 'localhost')
+_pg_port = os.environ.get('PGPORT', '5432')
+_pg_user = os.environ.get('PGUSER', 'postgres')
+_pg_password = os.environ.get('PGPASSWORD', '')
+_pg_database = os.environ.get('PGDATABASE', 'railway')
+_local_db_url = f"postgresql://{_pg_user}:{_pg_password}@{_pg_host}:{_pg_port}/{_pg_database}"
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'HOST': os.environ.get('PGHOST', 'localhost'),
-        'PORT': os.environ.get('PGPORT', '5432'),
-        'USER': os.environ.get('PGUSER', 'postgres'),
-        'PASSWORD': os.environ.get('PGPASSWORD', ''),
-        'NAME': os.environ.get('PGDATABASE', 'railway'),
-        'CONN_MAX_AGE': 600,
-        'OPTIONS': {
-            'sslmode': 'require' if not DEBUG else 'prefer',
-        }
-    }
+    'default': dj_database_url.config(
+        default=_local_db_url,
+        conn_max_age=600,
+        ssl_require=not DEBUG,
+    )
 }
 
 # 🔐 PASSWORDS
