@@ -519,8 +519,8 @@ def datos_dashboard(request):
 
     for venta in ventas_recientes:
         fechas.append(venta.fecha.strftime('%d/%m'))
-        total_venta = venta.detalleventa_set.aggregate
-        total=Sum('subtotal')
+        total_venta = venta.detalleventa_set.aggregate(total=Sum('subtotal'))
+        totales.append(float(total_venta['total'] or 0))
 
     # 💰 TOTAL VENTAS
     total_ventas = Venta.objects.aggregate(

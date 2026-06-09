@@ -41,10 +41,10 @@ class Produccion(models.Model):
 class Empleado(models.Model):
     nombre = models.CharField(max_length=100)
     telefono = models.CharField(max_length=20, blank=True, null=True)
-    puesto = models.CharField(max_length=50)
+    puesto = models.CharField(max_length=50, blank=True, null=True)
     salario = models.FloatField()
-    dias_trabajo = models.CharField(max_length=100)
-    horario = models.CharField(max_length=100)
+    dias_trabajo = models.CharField(max_length=100, blank=True, null=True)
+    horario = models.CharField(max_length=100, blank=True, null=True)
     fecha_ingreso = models.DateField(auto_now_add=True)
     foto = models.ImageField(upload_to='empleados/', blank=True, null=True)
 
