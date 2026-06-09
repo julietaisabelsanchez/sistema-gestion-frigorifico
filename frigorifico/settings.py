@@ -13,12 +13,16 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "web-production-76047.up.railway.app",
+    "web-frigorificochicoana.up.railway.app",
+    "web-frigorificochicoana.com-ar",
     "localhost",
     "127.0.0.1",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://web-production-76047.up.railway.app",
+    "https://web-frigorificochicoana.up.railway.app",
+    "https://web-frigorificochicoana.com-ar",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
