@@ -1,0 +1,3 @@
+[deploy]
+startCommand = "gunicorn frigorifico.wsgi"
+preDeployCommand = "python manage.py migrate"
