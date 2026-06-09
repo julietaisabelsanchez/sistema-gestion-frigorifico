@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+import dj_database_url
 
 # 📁 BASE DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -87,18 +88,10 @@ WSGI_APPLICATION = 'frigorifico.wsgi.application'
 
 # 🗄️ BASE DE DATOS
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'HOST': os.environ.get('PGHOST', 'localhost'),
-        'PORT': os.environ.get('PGPORT', '5432'),
-        'USER': os.environ.get('PGUSER', 'postgres'),
-        'PASSWORD': os.environ.get('PGPASSWORD', ''),
-        'NAME': os.environ.get('PGDATABASE', 'railway'),
-        'CONN_MAX_AGE': 600,
-        'OPTIONS': {
-            'sslmode': 'require' if not DEBUG else 'prefer',
-        }
-    }
+    'default': dj_database_url.config(
+        default='postgres://postgres@localhost:5432/railway',
+        conn_max_age=600,
+    )
 }
 
 # 🔐 PASSWORDS
